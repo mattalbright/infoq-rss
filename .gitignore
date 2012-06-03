@@ -1,18 +1,13 @@
-*.gem
-*.rbc
-.bundle
-.config
-coverage
-InstalledFiles
-lib/bundler/man
-pkg
-rdoc
-spec/reports
-test/tmp
-test/version_tmp
-tmp
+syntax: glob
+bin
+vendor/bundle/
+vendor/ruby/
+log/*.log
+\.DS_Store
+coverage.data
+coverage/
+*~
 
-# YARD artifacts
-.yardoc
-_yardoc
-doc/
+syntax: regexp
+\.orig$
+\.orig\..*$
