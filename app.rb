@@ -1,4 +1,5 @@
 require 'rss'
+require 'net/http'
 require 'open-uri'
 
 class InfoQApp < Sinatra::Base
@@ -23,7 +24,7 @@ get '/rss' do
 					item.link = i.link
 					item.title = i.title
 					item.description = i.description
-					item.enclosure.url = "/mp3/#{preso_path}"
+					item.enclosure.url = "/mp3/#{preso_path}?token=#{token}"
 					item.enclosure.length = 65_000_000
 					item.enclosure.type = 'audio/mpeg'
 				end
@@ -35,8 +36,30 @@ get '/rss' do
 	rss_out.to_s
 end
 
+def login(token)
+	login = {
+		'DrROHqmA6qPdIMgWBTVyXnko3xVw5YBZ' => {
+			username: "1",
+			password: "2",
+		}
+	}[token]
+	
+	return unless login
+	
+	uri = URI("https://www.infoq.com/login.action")
+	http = Net::HTTP.new(uri.host, uri.port)
+	http.use_ssl = true
+	res = http.post(uri.path, 'username' => login[:username], 'password' => login[:password])
+	user_cookie = res.get_fields('set-cookie').find {
+		|c| c.start_with?('RegisteredUserCookie')
+	}.match('RegisteredUserCookie=([^;]+);')[1]
+	
+	user_cookie
+end
+
 get '/mp3/:preso_path' do |preso_path|
 	preso_path
+	login(params[:token])
 end
 
 end
