@@ -1,5 +1,4 @@
 require 'rss'
-require 'net/http'
 require 'open-uri'
 
 class InfoQApp < Sinatra::Base
@@ -37,24 +36,29 @@ get '/rss' do
 end
 
 def login(token)
-	login = {
-		'DrROHqmA6qPdIMgWBTVyXnko3xVw5YBZ' => {
-			username: "1",
-			password: "2",
-		}
+	form_data = {
+		'DrROHqmA6qPdIMgWBTVyXnko3xVw5YBZ' => [
+			Curl::PostField.content('username', 'mattalbright'),
+			Curl::PostField.content('password', 'mattalbrightpass'),
+		]
 	}[token]
 	
-	return unless login
+	return unless form_data
 	
-	uri = URI("https://www.infoq.com/login.action")
-	http = Net::HTTP.new(uri.host, uri.port)
-	http.use_ssl = true
-	res = http.post(uri.path, 'username' => login[:username], 'password' => login[:password])
-	user_cookie = res.get_fields('set-cookie').find {
-		|c| c.start_with?('RegisteredUserCookie')
-	}.match('RegisteredUserCookie=([^;]+);')[1]
+	curl = Curl::Easy.new("https://www.infoq.com/login.action")
+	curl.enable_cookies
+	curl.http_post(*form_data)
+	curl.perform
 	
-	user_cookie
+	puts curl.headers.inspect
+	
+	curl.response_code
+#	res.get_fields('set-cookie').inspect
+	# user_cookie = res.get_fields('set-cookie').find {
+	# 	|c| c.start_with?('RegisteredUserCookie')
+	# }.match('RegisteredUserCookie=([^;]+);')[1]
+	# 
+	# user_cookie
 end
 
 get '/mp3/:preso_path' do |preso_path|
