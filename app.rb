@@ -37,33 +37,54 @@ end
 
 def login(token)
 	form_data = {
-		'DrROHqmA6qPdIMgWBTVyXnko3xVw5YBZ' => [
-			Curl::PostField.content('username', 'mattalbright'),
-			Curl::PostField.content('password', 'mattalbrightpass'),
-		]
+		'DrROHqmA6qPdIMgWBTVyXnko3xVw5YBZ' => {
+			'username' => 'mattalbright@gmail.com',
+			'password' => 'mattalbrightpass',
+		}
 	}[token]
 	
 	return unless form_data
 	
 	curl = Curl::Easy.new("https://www.infoq.com/login.action")
-	curl.enable_cookies
-	curl.http_post(*form_data)
-	curl.perform
+	params = form_data.keys.map { |k| Curl::PostField.content(k, form_data[k]) }
 	
-	puts curl.headers.inspect
+	user_cookie = ""
 	
-	curl.response_code
-#	res.get_fields('set-cookie').inspect
-	# user_cookie = res.get_fields('set-cookie').find {
-	# 	|c| c.start_with?('RegisteredUserCookie')
-	# }.match('RegisteredUserCookie=([^;]+);')[1]
-	# 
-	# user_cookie
+	curl.on_header do |header|
+		header.match('RegisteredUserCookie=[^;]+') { |m| user_cookie = m[0] }
+		header.length
+	end
+	curl.http_post(*params)
+	
+	user_cookie
+end
+
+def get_mp3_url(preso_path, user_cookie)
+	mp3_href = nil
+	curl = Curl::Easy.new("http://www.infoq.com/presentations/#{preso_path}")
+	curl.headers['Cookie'] = user_cookie
+	curl.on_body do |body|
+		body.match('class="link-mp3" +href="(/mp3download[^"]+)"') { |m| mp3_href = m[1] }
+		body.length
+	end
+	curl.http_get
+	return unless mp3_href
+	
+	curl.url = "http://www.infoq.com#{mp3_href}"
+	mp3_abs_url = nil
+	curl.on_header do |header|
+		header.match('Location: ([[:graph:]]+)') { |m| mp3_abs_url = m[1] }
+		header.length
+	end
+	curl.http_get
+
+	mp3_abs_url
 end
 
 get '/mp3/:preso_path' do |preso_path|
-	preso_path
-	login(params[:token])
+	user_cookie = login(params[:token])
+	mp3_url = get_mp3_url(preso_path, user_cookie)
+	redirect mp3_url
 end
 
 end
