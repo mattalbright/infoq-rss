@@ -23,7 +23,7 @@ get '/rss' do
 					item.link = i.link
 					item.title = i.title
 					item.description = i.description
-					item.enclosure.url = "/mp3/#{preso_path}?token=#{token}"
+					item.enclosure.url = "http://#{env['HTTP_HOST']}/mp3/#{preso_path}?token=#{token}"
 					item.enclosure.length = 65_000_000
 					item.enclosure.type = 'audio/mpeg'
 				end
