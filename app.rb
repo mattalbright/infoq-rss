@@ -1,5 +1,6 @@
 require 'rss'
 require 'open-uri'
+require 'uri'
 
 class InfoQApp < Sinatra::Base
 
@@ -48,23 +49,24 @@ def get_user_cookie
 		header.match('RegisteredUserCookie=[^;]+') { |m| user_cookie = m[0] }
 		header.length
 	end
-	curl.http_post(URI.encode_www_form('username' => 'mattalbright+infoq@gmail.com', 'password' => 'infoqpass'))
+	curl.http_post(URI.encode_www_form(
+		'username' => 'mattalbright+infoq@gmail.com', 'password' => 'infoqpass'))
 	
 	user_cookie
 end
 
 def get_mp3_url(preso_path, user_cookie)
-	mp3_href = nil
+	filename = nil
 	curl = Curl::Easy.new("http://www.infoq.com/presentations/#{preso_path}")
 	curl.headers['Cookie'] = user_cookie
 	curl.on_body do |body|
-		body.match('class="link-mp3" +href="(/mp3download[^"]+)"') { |m| mp3_href = m[1] }
+		body.match('value="(presentations/[^"]+\.mp3)"') { |m| filename = m[1] }
 		body.length
 	end
 	curl.http_get
-	return unless mp3_href
+	return unless filename
 	
-	curl.url = "http://www.infoq.com#{mp3_href}"
+	curl.url = "http://www.infoq.com/mp3download.action?filename=#{URI.encode(filename)}"
 	mp3_abs_url = nil
 	curl.on_header do |header|
 		header.match('Location: ([[:graph:]]+)') { |m| mp3_abs_url = m[1] }
