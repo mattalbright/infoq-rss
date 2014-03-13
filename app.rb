@@ -4,6 +4,8 @@ require 'uri'
 
 class InfoQApp < Sinatra::Base
 
+USER_AGENT = "Mozilla/5.0 (https://github.com/mattalbright/infoq-rss) Chrome/33.0.1750.149"
+
 get '/rss' do
 	# Default is everything... create your own infoq account and exclude stuff if you want in Preferences.
 	token = params[:token] || 'FyBAnM6KAPnHXKa0T2oa0NCGJ6hRjrAU' 
@@ -45,6 +47,7 @@ def get_user_cookie
 	user_cookie = ""
 	
 	curl = Curl::Easy.new("https://www.infoq.com/login.action")
+	curl.useragent = USER_AGENT
 	curl.on_header do |header|
 		header.match('RegisteredUserCookie=[^;]+') { |m| user_cookie = m[0] }
 		header.length
@@ -58,6 +61,7 @@ end
 def get_mp3_url(preso_path, user_cookie)
 	filename = nil
 	curl = Curl::Easy.new("http://www.infoq.com/presentations/#{preso_path}")
+	curl.useragent = USER_AGENT
 	curl.headers['Cookie'] = user_cookie
 	curl.on_body do |body|
 		body.match('value="(presentations/[^"]+\.mp3)"') { |m| filename = m[1] }
@@ -66,13 +70,13 @@ def get_mp3_url(preso_path, user_cookie)
 	curl.http_get
 	return unless filename
 	
-	curl.url = "http://www.infoq.com/mp3download.action?filename=#{URI.encode(filename)}"
+	curl.url = "http://www.infoq.com/mp3download.action"
 	mp3_abs_url = nil
 	curl.on_header do |header|
 		header.match('Location: ([[:graph:]]+)') { |m| mp3_abs_url = m[1] }
 		header.length
 	end
-	curl.http_get
+	curl.http_post(URI.encode_www_form('filename' => filename))
 
 	mp3_abs_url
 end
