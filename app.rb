@@ -47,6 +47,7 @@ def get_user_cookie
 	user_cookie = ""
 	
 	curl = Curl::Easy.new("https://www.infoq.com/login.action")
+	curl.ssl_verify_peer = false
 	curl.useragent = USER_AGENT
 	curl.on_header do |header|
 		header.match('RegisteredUserCookie=[^;]+') { |m| user_cookie = m[0] }
