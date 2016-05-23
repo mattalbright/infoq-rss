@@ -5,12 +5,13 @@ require 'uri'
 class InfoQApp < Sinatra::Base
 
 USER_AGENT = "Mozilla/5.0 (https://github.com/mattalbright/infoq-rss) Chrome/33.0.1750.149"
+INFOQ_BASE = "https://www.infoq.com"
 
 get '/rss' do
 	# Default is everything... create your own infoq account and exclude stuff if you want in Preferences.
 	token = params[:token] || 'FyBAnM6KAPnHXKa0T2oa0NCGJ6hRjrAU' 
 	rss_out = RSS::Maker.make('2.0') do |feed_out|
-		url = "http://www.infoq.com/rss/rss.action?token=#{token}"
+		url = "#{INFOQ_BASE}/feed?token=#{token}"
 		open(url) do |rss_in|
 			feed_in = RSS::Parser.parse(rss_in)
 			feed_out.channel.title = feed_in.channel.title
@@ -20,7 +21,7 @@ get '/rss' do
 			feed_in.items.each do |item_in|
 				next unless item_in.title.start_with?("Presentation")
 				preso_path = false
-				item_in.link.match('/presentations/(.+)$') { |m| preso_path = m[1] }
+				item_in.link.match('/presentations/([^?]+)\?|$') { |m| preso_path = m[1] }
 				next unless preso_path
 				
 				feed_out.items.new_item do |item_out|
@@ -46,7 +47,7 @@ end
 def get_user_cookie
 	user_cookie = ""
 	
-	curl = Curl::Easy.new("https://www.infoq.com/login.action")
+	curl = Curl::Easy.new("#{INFOQ_BASE}/login.action")
 	curl.ssl_verify_peer = false
 	curl.useragent = USER_AGENT
 	curl.on_header do |header|
@@ -61,7 +62,7 @@ end
 
 def get_mp3_url(preso_path, user_cookie)
 	filename = nil
-	curl = Curl::Easy.new("http://www.infoq.com/presentations/#{preso_path}")
+	curl = Curl::Easy.new("#{INFOQ_BASE}/presentations/#{preso_path}")
 	curl.useragent = USER_AGENT
 	curl.headers['Cookie'] = user_cookie
 	curl.on_body do |body|
@@ -71,7 +72,7 @@ def get_mp3_url(preso_path, user_cookie)
 	curl.http_get
 	return unless filename
 	
-	curl.url = "http://www.infoq.com/mp3download.action"
+	curl.url = "#{INFOQ_BASE}/mp3download.action"
 	mp3_abs_url = nil
 	curl.on_header do |header|
 		header.match('Location: ([[:graph:]]+)') { |m| mp3_abs_url = m[1] }
